@@ -11,6 +11,7 @@ import {
   ArrowUpRight,
   Briefcase,
   Loader2,
+  Zap,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
@@ -29,11 +30,23 @@ interface Holding {
   added_at: string
 }
 
+interface PortfolioSummary {
+  totalValue: number
+  totalAnnualDividends: number
+  monthlyAverageIncome: number
+  yieldPercent: number
+  nextPaymentDate: string | null
+  nextPaymentTotal: number
+  sectorBreakdown: Record<string, number>
+  forecasts: any[]
+}
+
 export default function DashboardOverview() {
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
   const [portfolios, setPortfolios] = useState<Portfolio[]>([])
   const [holdings, setHoldings] = useState<Holding[]>([])
+  const [summary, setSummary] = useState<PortfolioSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [quickTicker, setQuickTicker] = useState('')
   const [quickShares, setQuickShares] = useState('')
@@ -81,6 +94,17 @@ export default function DashboardOverview() {
         .eq('portfolio_id', portfolioData[0].id)
         .order('added_at', { ascending: false })
       setHoldings(holdingsData || [])
+
+      // Fetch portfolio forecast/summary
+      try {
+        const response = await fetch('/api/forecast/portfolio')
+        if (response.ok) {
+          const summaryData = await response.json()
+          setSummary(summaryData)
+        }
+      } catch (err) {
+        console.error('Error fetching portfolio summary:', err)
+      }
     }
 
     setLoading(false)
@@ -123,6 +147,24 @@ export default function DashboardOverview() {
   const totalHoldings = holdings.length
   const totalShares = holdings.reduce((sum, h) => sum + Number(h.shares), 0)
 
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount)
+  }
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '—'
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }).format(new Date(dateString))
+  }
+
   const summaryCards = [
     {
       label: 'Total Holdings',
@@ -132,23 +174,23 @@ export default function DashboardOverview() {
       color: 'bg-primary/10 text-primary',
     },
     {
-      label: 'Total Shares',
-      value: totalShares.toLocaleString(),
-      sub: 'Across all stocks',
-      icon: PieChart,
-      color: 'bg-blue-50 text-blue-600',
-    },
-    {
-      label: 'Monthly Income',
-      value: '—',
-      sub: 'Connect market data',
+      label: 'Annual Income',
+      value: summary ? formatCurrency(summary.totalAnnualDividends) : '—',
+      sub: 'Based on current yields',
       icon: DollarSign,
       color: 'bg-emerald-50 text-emerald-600',
     },
     {
-      label: 'Next Ex-Date',
-      value: '—',
-      sub: 'Connect market data',
+      label: 'Monthly Average',
+      value: summary ? formatCurrency(summary.monthlyAverageIncome) : '—',
+      sub: 'Projected passive income',
+      icon: TrendingUp,
+      color: 'bg-blue-50 text-blue-600',
+    },
+    {
+      label: 'Next Payment',
+      value: summary?.nextPaymentDate ? formatDate(summary.nextPaymentDate) : '—',
+      sub: summary?.nextPaymentTotal ? `$${summary.nextPaymentTotal.toFixed(2)}` : 'Loading...',
       icon: Calendar,
       color: 'bg-amber-50 text-amber-600',
     },
@@ -320,23 +362,50 @@ export default function DashboardOverview() {
         </motion.div>
       </div>
 
-      {/* Market Data Banner */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.7 }}
-        className="bg-muted/50 border border-border rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4"
-      >
-        <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0">
-          <TrendingUp className="w-6 h-6 text-primary" />
-        </div>
-        <div className="flex-1">
-          <h3 className="font-semibold text-foreground">Market Data Coming Soon</h3>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Once connected, you'll see real-time dividend yields, payment schedules, income forecasts, and your calendar will populate automatically.
-          </p>
-        </div>
-      </motion.div>
+      {/* Market Data & Insights */}
+      {summary && summary.forecasts.length > 0 ? (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+          className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4"
+        >
+          <div className="w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center flex-shrink-0">
+            <Zap className="w-6 h-6 text-primary" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-foreground">Portfolio Insights</h3>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Your dividend portfolio is projected to generate {formatCurrency(summary.totalAnnualDividends)} annually.
+              {summary.yieldPercent > 0 && ` Average yield: ${summary.yieldPercent.toFixed(2)}%.`}
+              {summary.nextPaymentDate && ` Next dividend payment on ${formatDate(summary.nextPaymentDate)}.`}
+            </p>
+          </div>
+          <Link
+            href="/dashboard/portfolio"
+            className="flex-shrink-0 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            View Analysis
+          </Link>
+        </motion.div>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+          className="bg-muted/50 border border-border rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4"
+        >
+          <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0">
+            <TrendingUp className="w-6 h-6 text-primary" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-foreground">Add Your First Stock</h3>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Start tracking dividend-paying stocks to see income projections and analysis.
+            </p>
+          </div>
+        </motion.div>
+      )}
     </div>
   )
 }
