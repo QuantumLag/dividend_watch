@@ -145,7 +145,10 @@ export function ParallaxHero({ onGetStarted }: ParallaxHeroProps) {
               Start Free Trial
               <ArrowRight className="w-4 sm:w-5 h-4 sm:h-5" />
             </button>
-            <button className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 border border-border rounded-xl text-foreground font-medium hover:bg-muted transition-colors text-sm sm:text-base">
+            <button
+              onClick={() => window.open('https://www.youtube.com/watch?v=dQw4w9WgXcQ', '_blank')}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 border border-border rounded-xl text-foreground font-medium hover:bg-muted transition-colors text-sm sm:text-base"
+            >
               <Play className="w-4 sm:w-5 h-4 sm:h-5" />
               Watch Demo
             </button>
