@@ -16,12 +16,14 @@ import {
   X,
   ChevronRight,
   Crown,
+  BarChart3,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 const sidebarLinks = [
   { label: 'Overview', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Portfolio', href: '/dashboard/portfolio', icon: Briefcase },
+  { label: 'Analysis', href: '/dashboard/analysis', icon: BarChart3 },
   { label: 'Calendar', href: '/dashboard/calendar', icon: Calendar },
   { label: 'Watchlist', href: '/dashboard/watchlist', icon: Eye },
   { label: 'Settings', href: '/dashboard/settings', icon: Settings },
